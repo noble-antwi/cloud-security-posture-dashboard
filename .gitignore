@@ -56,6 +56,10 @@ dashboard/data/
 dashboard/logs/
 *.log
 
+# Setup files (local configuration)
+SETUP.md
+QUICKSTART.md
+
 # Cloud credentials (NEVER commit these!)
 *.pem
 *.key
