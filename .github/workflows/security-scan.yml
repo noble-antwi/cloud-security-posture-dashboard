@@ -1,0 +1,148 @@
+name: Security Scan CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run security scans weekly on Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  terraform-validate:
+    name: Validate Terraform Code
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+      
+      - name: Terraform Format Check
+        run: |
+          terraform fmt -check -recursive terraform/
+      
+      - name: Validate AWS Terraform
+        working-directory: terraform/aws
+        run: |
+          terraform init -backend=false
+          terraform validate
+      
+      - name: Validate Azure Terraform
+        working-directory: terraform/azure
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+  python-tests:
+    name: Run Python Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+      
+      - name: Run tests with coverage
+        run: |
+          pytest tests/ --cov=scripts --cov-report=xml --cov-report=term
+      
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install linting tools
+        run: |
+          pip install black flake8 pylint
+      
+      - name: Run Black (format check)
+        run: |
+          black --check scripts/
+      
+      - name: Run Flake8
+        run: |
+          flake8 scripts/ --max-line-length=100 --exclude=venv
+      
+      - name: Run Pylint
+        run: |
+          pylint scripts/ --disable=C0111,R0903 || true
+
+  security-scan:
+    name: Security Dependency Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # Optional: Deploy to cloud environments (for advanced users)
+  # deploy-test-environment:
+  #   name: Deploy Test Environment
+  #   runs-on: ubuntu-latest
+  #   needs: [terraform-validate, python-tests]
+  #   if: github.ref == 'refs/heads/main'
+  #   
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #     
+  #     - name: Configure AWS credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: us-east-1
+  #     
+  #     - name: Setup Terraform
+  #       uses: hashicorp/setup-terraform@v3
+  #     
+  #     - name: Deploy AWS resources
+  #       working-directory: terraform/aws
+  #       run: |
+  #         terraform init
+  #         terraform plan
+  #         terraform apply -auto-approve
