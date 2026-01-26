@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}All Findings - Cloud Security{% endblock %}
+
+{% block content %}
+<!--
+ALL FINDINGS PAGE
+=================
+Displays all security findings in a detailed, searchable table.
+Each finding can be expanded to show full details including:
+- Issue description
+- Risk explanation
+- Remediation steps
+- Compliance frameworks
+-->
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-list-check"></i> All Security Findings</h2>
+    <span class="badge bg-primary fs-6">{{ findings|length }} findings</span>
+</div>
+
+<!-- Search/Filter Box -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" id="searchInput"
+                           placeholder="Search findings..." onkeyup="filterFindings()">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="severityFilter" onchange="filterFindings()">
+                    <option value="">All Severities</option>
+                    <option value="Critical">Critical</option>
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="providerFilter" onchange="filterFindings()">
+                    <option value="">All Providers</option>
+                    <option value="AWS">AWS</option>
+                    <option value="Azure">Azure</option>
+                    <option value="GCP">GCP</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Findings Accordion -->
+{% if findings %}
+<div class="accordion" id="findingsAccordion">
+    {% for finding in findings %}
+    <div class="accordion-item finding-item"
+         data-severity="{{ finding.severity }}"
+         data-provider="{{ finding.cloud_provider }}"
+         data-searchable="{{ finding.title }} {{ finding.resource }} {{ finding.issue }}">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#finding-{{ loop.index }}">
+                <span class="badge me-2" style="background-color: {{ get_severity_color(finding.severity) }}">
+                    {{ finding.severity }}
+                </span>
+                <span class="me-2">{{ finding.title }}</span>
+                <span class="badge bg-secondary ms-auto me-2">{{ finding.cloud_provider }}</span>
+            </button>
+        </h2>
+        <div id="finding-{{ loop.index }}" class="accordion-collapse collapse"
+             data-bs-parent="#findingsAccordion">
+            <div class="accordion-body">
+                <div class="row">
+                    <!-- Left Column: Details -->
+                    <div class="col-md-8">
+                        <h6 class="text-muted">Resource</h6>
+                        <p><code>{{ finding.resource }}</code></p>
+                        {% if finding.resource_arn %}
+                        <p class="small text-muted">ARN: {{ finding.resource_arn }}</p>
+                        {% endif %}
+
+                        <h6 class="text-muted mt-3">Issue</h6>
+                        <div class="alert alert-warning">
+                            {{ finding.issue }}
+                        </div>
+
+                        {% if finding.risk %}
+                        <h6 class="text-muted mt-3">Risk</h6>
+                        <p>{{ finding.risk }}</p>
+                        {% endif %}
+
+                        {% if finding.remediation %}
+                        <h6 class="text-muted mt-3">Remediation</h6>
+                        <div class="bg-light p-3 rounded">
+                            <pre class="mb-0" style="white-space: pre-wrap;">{{ finding.remediation }}</pre>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Right Column: Metadata -->
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">Details</h6>
+                                <ul class="list-unstyled mb-0">
+                                    <li><strong>Finding ID:</strong><br>
+                                        <code class="small">{{ finding.finding_id }}</code>
+                                    </li>
+                                    <li class="mt-2"><strong>Region:</strong><br>
+                                        {{ finding.region or 'N/A' }}
+                                    </li>
+                                    <li class="mt-2"><strong>Account:</strong><br>
+                                        {{ finding.account_id or 'N/A' }}
+                                    </li>
+                                    <li class="mt-2"><strong>Source:</strong><br>
+                                        {{ finding.source }}
+                                    </li>
+                                </ul>
+
+                                {% if finding.compliance %}
+                                <h6 class="card-title mt-3">Compliance Frameworks</h6>
+                                <div>
+                                    {% for framework in finding.compliance[:5] %}
+                                    <span class="badge bg-info me-1 mb-1">{{ framework }}</span>
+                                    {% endfor %}
+                                    {% if finding.compliance|length > 5 %}
+                                    <span class="badge bg-secondary">+{{ finding.compliance|length - 5 }} more</span>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    <h4><i class="bi bi-info-circle"></i> No Findings</h4>
+    <p>No security findings have been aggregated yet.</p>
+    <p>Run these commands to generate findings:</p>
+    <ol>
+        <li><code>prowler aws --service s3</code> - Run security scan</li>
+        <li><code>python scripts/scanning/aggregate_findings.py</code> - Aggregate results</li>
+    </ol>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// =============================================================================
+// SEARCH AND FILTER FUNCTIONALITY
+// =============================================================================
+
+function filterFindings() {
+    // Get filter values
+    const searchText = document.getElementById('searchInput').value.toLowerCase();
+    const severityFilter = document.getElementById('severityFilter').value;
+    const providerFilter = document.getElementById('providerFilter').value;
+
+    // Get all finding items
+    const items = document.querySelectorAll('.finding-item');
+
+    items.forEach(item => {
+        // Get item data attributes
+        const severity = item.getAttribute('data-severity');
+        const provider = item.getAttribute('data-provider');
+        const searchable = item.getAttribute('data-searchable').toLowerCase();
+
+        // Check if item matches all filters
+        const matchesSearch = searchable.includes(searchText);
+        const matchesSeverity = !severityFilter || severity === severityFilter;
+        const matchesProvider = !providerFilter || provider === providerFilter;
+
+        // Show/hide based on filters
+        if (matchesSearch && matchesSeverity && matchesProvider) {
+            item.style.display = '';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+
+    // Update count
+    const visibleCount = document.querySelectorAll('.finding-item:not([style*="display: none"])').length;
+    // Could update a counter here if needed
+}
+</script>
+{% endblock %}

@@ -48,6 +48,7 @@ ENV/
 prowler-output/
 scoutsuite-results/
 scan-results/
+output/
 *.json.bak
 findings/
 

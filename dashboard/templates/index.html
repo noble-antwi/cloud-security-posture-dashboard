@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Cloud Security{% endblock %}
+
+{% block content %}
+<!--
+DASHBOARD HOME PAGE
+===================
+This shows:
+1. Summary cards (total findings, by severity)
+2. Pie chart of severity breakdown
+3. Recent findings list
+
+The data comes from app.py which passes:
+- stats: dict with counts
+- findings: list of all findings
+- severity_data: dict for the chart
+-->
+
+<!-- Summary Cards Row -->
+<div class="row mb-4">
+    <!-- Total Findings Card -->
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-white bg-primary h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-uppercase mb-0">Total Findings</h6>
+                        <h2 class="mb-0">{{ stats.total }}</h2>
+                    </div>
+                    <i class="bi bi-exclamation-triangle-fill fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Critical Findings Card -->
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-white h-100" style="background-color: #dc3545;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-uppercase mb-0">Critical</h6>
+                        <h2 class="mb-0">{{ stats.critical }}</h2>
+                    </div>
+                    <i class="bi bi-x-circle-fill fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- High Findings Card -->
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-white h-100" style="background-color: #fd7e14;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-uppercase mb-0">High</h6>
+                        <h2 class="mb-0">{{ stats.high }}</h2>
+                    </div>
+                    <i class="bi bi-exclamation-circle-fill fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Medium Findings Card -->
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-dark h-100" style="background-color: #ffc107;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-uppercase mb-0">Medium</h6>
+                        <h2 class="mb-0">{{ stats.medium }}</h2>
+                    </div>
+                    <i class="bi bi-dash-circle-fill fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <!-- Severity Pie Chart -->
+    <div class="col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-pie-chart-fill"></i> Findings by Severity
+            </div>
+            <div class="card-body">
+                <canvas id="severityChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cloud Provider Chart -->
+    <div class="col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-cloud-fill"></i> Findings by Cloud Provider
+            </div>
+            <div class="card-body">
+                <canvas id="providerChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Findings Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-list-check"></i> Recent Findings</span>
+                <a href="/findings" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if findings %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Severity</th>
+                                <th>Title</th>
+                                <th>Resource</th>
+                                <th>Provider</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for finding in findings[:10] %}
+                            <tr>
+                                <td>
+                                    <span class="badge" style="background-color: {{ get_severity_color(finding.severity) }}">
+                                        {{ finding.severity }}
+                                    </span>
+                                </td>
+                                <td>{{ finding.title }}</td>
+                                <td><code>{{ finding.resource[:40] }}{% if finding.resource|length > 40 %}...{% endif %}</code></td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ finding.cloud_provider }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    No findings yet. Run a security scan first!
+                    <br><br>
+                    <code>prowler aws --service s3</code>
+                    <br>
+                    <code>python scripts/scanning/aggregate_findings.py</code>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// =============================================================================
+// CHART.JS CONFIGURATION
+// =============================================================================
+// Chart.js is a JavaScript library for creating charts
+// We use Jinja2 to inject Python data into JavaScript
+
+// Data from Python (passed via template)
+const severityData = {{ severity_data | tojson | safe }};
+const providerData = {{ summary.get('by_cloud_provider', {}) | tojson | safe }};
+
+// Color mapping - ensures each severity gets the correct color regardless of order
+const severityColorMap = {
+    'Critical': '#dc3545',      // Red
+    'High': '#fd7e14',          // Orange
+    'Medium': '#ffc107',        // Yellow
+    'Low': '#28a745',           // Green
+    'Informational': '#17a2b8'  // Blue
+};
+
+// Get labels and map each to its correct color
+const severityLabels = Object.keys(severityData);
+const severityColors = severityLabels.map(label => severityColorMap[label] || '#6c757d');
+
+// Severity Pie Chart
+const severityCtx = document.getElementById('severityChart').getContext('2d');
+new Chart(severityCtx, {
+    type: 'doughnut',  // 'pie' or 'doughnut'
+    data: {
+        labels: severityLabels,
+        datasets: [{
+            data: Object.values(severityData),
+            backgroundColor: severityColors,  // Now correctly mapped to labels
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Cloud Provider Bar Chart
+const providerCtx = document.getElementById('providerChart').getContext('2d');
+new Chart(providerCtx, {
+    type: 'bar',
+    data: {
+        labels: Object.keys(providerData),
+        datasets: [{
+            label: 'Findings',
+            data: Object.values(providerData),
+            backgroundColor: [
+                '#FF9900',  // AWS Orange
+                '#0089D6',  // Azure Blue
+                '#4285F4'   // GCP Blue
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,149 @@
+/*
+ * Cloud Security Dashboard - Custom Styles
+ *
+ * This file contains custom CSS to enhance the Bootstrap styling.
+ * Most styling comes from Bootstrap, but we add some customizations here.
+ */
+
+/* =============================================================================
+   GENERAL STYLES
+   ============================================================================= */
+
+body {
+    /* Ensure footer stays at bottom */
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* Make code blocks more readable */
+code {
+    font-size: 0.85em;
+    word-break: break-all;
+}
+
+pre {
+    font-size: 0.85em;
+}
+
+/* =============================================================================
+   CARD ENHANCEMENTS
+   ============================================================================= */
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: none;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    font-weight: 500;
+}
+
+/* Summary cards hover effect */
+.card.text-white:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+}
+
+/* =============================================================================
+   SEVERITY BADGES
+   ============================================================================= */
+
+.badge {
+    font-weight: 500;
+    padding: 0.4em 0.6em;
+}
+
+/* =============================================================================
+   TABLE STYLES
+   ============================================================================= */
+
+.table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f1f3f5;
+}
+
+/* =============================================================================
+   ACCORDION STYLES
+   ============================================================================= */
+
+.accordion-button:not(.collapsed) {
+    background-color: #e7f1ff;
+    color: #0c63e4;
+}
+
+.accordion-button:focus {
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* =============================================================================
+   CHART CONTAINER
+   ============================================================================= */
+
+canvas {
+    max-height: 300px;
+}
+
+/* =============================================================================
+   NAVBAR CUSTOMIZATION
+   ============================================================================= */
+
+.navbar-brand {
+    font-weight: 600;
+}
+
+.navbar-brand i {
+    margin-right: 0.5rem;
+}
+
+/* =============================================================================
+   FOOTER
+   ============================================================================= */
+
+.footer {
+    border-top: 1px solid #dee2e6;
+}
+
+/* =============================================================================
+   UTILITY CLASSES
+   ============================================================================= */
+
+.opacity-50 {
+    opacity: 0.5;
+}
+
+/* Scrollable pre blocks */
+pre {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* =============================================================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================================================= */
+
+@media (max-width: 768px) {
+    .card h2 {
+        font-size: 1.5rem;
+    }
+
+    .accordion-button {
+        flex-wrap: wrap;
+    }
+
+    .accordion-button .badge {
+        margin-bottom: 0.25rem;
+    }
+}
