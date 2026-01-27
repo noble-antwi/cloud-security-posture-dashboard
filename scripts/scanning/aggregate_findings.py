@@ -92,28 +92,84 @@ class FindingsAggregator:
         return findings
     
     def load_scoutsuite_findings(self) -> List[Dict]:
-        """Load and parse ScoutSuite JSON results"""
+        """
+        Load and parse ScoutSuite JSON results.
+
+        ScoutSuite outputs a JavaScript file with structure:
+        scoutsuite_results = { ... JSON data ... }
+
+        The JSON contains:
+        - services: dict of services (storageaccounts, network, keyvault, etc.)
+        - Each service has 'findings' dict with flagged security issues
+        """
         print("Loading ScoutSuite findings...")
-        
-        # Find ScoutSuite results directory
-        scout_dirs = list(self.scoutsuite_dir.glob("azure_*"))
-        
-        if not scout_dirs:
-            print("No ScoutSuite results found")
+
+        # ScoutSuite outputs to: scoutsuite-report/scoutsuite-results/scoutsuite_results_azure-tenant-XXX.js
+        results_dir = self.scoutsuite_dir / "scoutsuite-results"
+
+        if not results_dir.exists():
+            print(f"ScoutSuite results directory not found: {results_dir}")
             return []
-        
-        latest_dir = max(scout_dirs, key=os.path.getctime)
-        results_file = latest_dir / "scoutsuite-results" / "scoutsuite_results.js"
-        
-        if not results_file.exists():
-            print(f"Results file not found: {results_file}")
+
+        # Find the results file (pattern: scoutsuite_results_azure-*.js)
+        result_files = list(results_dir.glob("scoutsuite_results_azure-*.js"))
+
+        if not result_files:
+            print("No ScoutSuite Azure results found")
             return []
-        
-        print(f"Reading: {results_file}")
-        
-        # TODO: Parse ScoutSuite results
+
+        # Get the most recent file
+        latest_file = max(result_files, key=os.path.getctime)
+        print(f"Reading: {latest_file}")
+
+        # Read and parse the JavaScript file
+        try:
+            with open(latest_file, 'r') as f:
+                content = f.read()
+
+            # Remove the JavaScript variable assignment to get pure JSON
+            # File starts with: scoutsuite_results =\n{...} or scoutsuite_results = {...}
+            if 'scoutsuite_results =' in content:
+                json_str = content.split('scoutsuite_results =', 1)[1].strip()
+                if json_str.startswith('\n'):
+                    json_str = json_str[1:]
+                scout_data = json.loads(json_str)
+            else:
+                print("Could not find scoutsuite_results in file")
+                return []
+
+        except json.JSONDecodeError as e:
+            print(f"Error parsing ScoutSuite JSON: {e}")
+            return []
+
+        # Extract findings from services
         findings = []
-        
+        services = scout_data.get('services', {})
+
+        for service_name, service_data in services.items():
+            service_findings = service_data.get('findings', {})
+
+            for finding_id, finding_data in service_findings.items():
+                # Only include findings with flagged items (actual issues)
+                flagged_items = finding_data.get('flagged_items', 0)
+                if flagged_items > 0:
+                    # Get the actual affected resources
+                    items = finding_data.get('items', [])
+
+                    # If no items list, create one entry for the finding itself
+                    if not items:
+                        normalized = self._normalize_scoutsuite_finding(
+                            finding_id, finding_data, service_name, None
+                        )
+                        findings.append(normalized)
+                    else:
+                        # Create a finding entry for each affected resource
+                        for item_id in items:
+                            normalized = self._normalize_scoutsuite_finding(
+                                finding_id, finding_data, service_name, item_id
+                            )
+                            findings.append(normalized)
+
         print(f"Loaded {len(findings)} ScoutSuite findings")
         return findings
     
@@ -175,19 +231,58 @@ class FindingsAggregator:
             'timestamp': datetime.now().isoformat()
         }
     
-    def _normalize_scoutsuite_finding(self, finding: Dict) -> Dict:
-        """Normalize ScoutSuite finding to common format"""
+    def _normalize_scoutsuite_finding(self, finding_id: str, finding_data: Dict,
+                                        service_name: str, item_id: Optional[str]) -> Dict:
+        """
+        Normalize ScoutSuite finding to common format.
+
+        ScoutSuite finding structure:
+        - description: What the check does
+        - rationale: Why this matters (risk)
+        - remediation: How to fix it
+        - level: danger, warning, info
+        - flagged_items: Count of affected resources
+        - items: List of affected resource IDs
+
+        Args:
+            finding_id: The check identifier (e.g., "storageaccount-public-traffic-allowed")
+            finding_data: The finding details dict
+            service_name: Azure service (storageaccounts, network, keyvault, etc.)
+            item_id: Specific resource ID (if applicable)
+        """
+        # Map ScoutSuite severity levels to our standard format
+        level = finding_data.get('level', 'warning')
+        severity_map = {
+            'danger': 'High',
+            'warning': 'Medium',
+            'info': 'Low'
+        }
+        severity = severity_map.get(level, 'Medium')
+
+        # Extract resource name from item_id if available
+        # item_id format varies: "subscriptions.XXX.resource_groups.XXX.providers.XXX.resource_name"
+        resource = item_id if item_id else f"{service_name} (multiple resources)"
+        if item_id and '.' in item_id:
+            # Try to get the last meaningful part as resource name
+            parts = item_id.split('.')
+            resource = parts[-1] if parts else item_id
+
         return {
             'source': 'ScoutSuite',
             'cloud_provider': 'Azure',
-            'finding_id': finding.get('id', 'unknown'),
-            'title': finding.get('description', ''),
-            'severity': finding.get('level', 'warning'),
+            'finding_id': finding_id,
+            'title': finding_data.get('description', finding_id),
+            'severity': severity,
             'status': 'FAIL',
-            'resource': finding.get('resource', ''),
-            'region': finding.get('region', 'global'),
-            'description': finding.get('rationale', ''),
-            'remediation': finding.get('remediation', ''),
+            'resource': resource,
+            'resource_arn': item_id or '',  # Full resource path
+            'region': 'global',  # Azure doesn't always have region in findings
+            'account_id': '',  # Will be populated from subscription if available
+            'description': finding_data.get('description', ''),
+            'issue': f"{finding_data.get('description', '')} - {finding_data.get('flagged_items', 0)} resource(s) affected",
+            'risk': finding_data.get('rationale', ''),
+            'remediation': finding_data.get('remediation', ''),
+            'compliance': finding_data.get('references', []),  # Compliance references if available
             'timestamp': datetime.now().isoformat()
         }
     

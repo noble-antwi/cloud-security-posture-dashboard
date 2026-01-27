@@ -1,267 +1,424 @@
 # Cloud Security Posture Dashboard
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![AWS](https://img.shields.io/badge/AWS-Security-orange)](https://aws.amazon.com/)
-[![Python](https://img.shields.io/badge/Python-3.9+-blue)](https://www.python.org/)
-[![Terraform](https://img.shields.io/badge/IaC-Terraform-purple)](https://www.terraform.io/)
-[![Prowler](https://img.shields.io/badge/Scanner-Prowler-green)](https://github.com/prowler-cloud/prowler)
+[![AWS](https://img.shields.io/badge/Cloud-AWS-FF9900?logo=amazon-aws)](https://aws.amazon.com/)
+[![Azure](https://img.shields.io/badge/Cloud-Azure-0078D4?logo=microsoft-azure)](https://azure.microsoft.com/)
+[![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Terraform](https://img.shields.io/badge/IaC-Terraform-7B42BC?logo=terraform)](https://www.terraform.io/)
+[![Prowler](https://img.shields.io/badge/Scanner-Prowler-00D4AA)](https://github.com/prowler-cloud/prowler)
+[![ScoutSuite](https://img.shields.io/badge/Scanner-ScoutSuite-FF6B6B)](https://github.com/nccgroup/ScoutSuite)
 
-> An automated cloud security assessment platform that deploys intentionally misconfigured AWS resources, scans them with Prowler, and displays findings in a centralized dashboard with severity-based categorization and remediation guidance.
+A comprehensive **multi-cloud security assessment platform** that automates the deployment of intentionally misconfigured resources, performs security scanning, aggregates findings into a unified format, and visualizes results through an interactive dashboard with remediation guidance.
 
-## Project Overview
+---
 
-Cloud Security Posture Dashboard is a hands-on security auditing solution designed to:
-- **Deploy** intentionally misconfigured AWS resources using Terraform (for learning purposes)
-- **Scan** infrastructure using Prowler to detect security vulnerabilities
-- **Aggregate** findings into a normalized format for analysis
-- **Visualize** security posture through an interactive web dashboard
-- **Remediate** issues using provided CLI commands and guidance
+## Table of Contents
 
-**Use Case**: Security professionals, cloud engineers, and students can use this platform to understand common cloud misconfigurations, practice security scanning, and learn remediation techniques in a safe environment.
+- [Overview](#overview)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Technology Stack](#technology-stack)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Project Structure](#project-structure)
+- [Security Scanners](#security-scanners)
+- [Remediation Engine](#remediation-engine)
+- [Dashboard](#dashboard)
+- [Cleanup](#cleanup)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
+- [Disclaimer](#disclaimer)
+
+---
+
+## Overview
+
+Cloud Security Posture Dashboard is an end-to-end security auditing solution designed for:
+
+| Capability | Description |
+|------------|-------------|
+| **Deploy** | Provision intentionally misconfigured cloud resources using Terraform |
+| **Scan** | Automated security assessment using Prowler (AWS) and ScoutSuite (Azure) |
+| **Aggregate** | Normalize findings from multiple tools into a unified schema |
+| **Visualize** | Interactive web dashboard with charts, filters, and detailed findings |
+| **Remediate** | Automated remediation scripts with CLI commands |
+
+### Use Cases
+
+- **Security Engineers**: Validate scanning tools and remediation workflows
+- **Cloud Engineers**: Learn common misconfigurations and how to detect them
+- **Students/Learners**: Hands-on practice with cloud security in a safe environment
+- **DevSecOps Teams**: Template for building security automation pipelines
+
+---
 
 ## Features
 
-- **Terraform Infrastructure**: Deploy intentionally misconfigured S3 buckets for security testing
-- **Prowler Integration**: Automated AWS security scanning with 500+ checks
-- **Python Aggregator**: Normalizes scan results into a unified JSON/CSV format
-- **Flask Dashboard**: Real-time visualization on port 51000
-- **Interactive Charts**: Doughnut chart for severity breakdown, bar chart for cloud providers
-- **Detailed Findings View**: Expandable accordion with full finding details
-- **Search & Filter**: Filter findings by severity, provider, or keyword
-- **Remediation Guidance**: CLI commands and documentation links for each finding
-- **Compliance Mapping**: CIS benchmark framework references (CIS-2.0, CIS-1.4, CIS-1.5)
+### Multi-Cloud Support
+- **AWS**: S3 buckets with encryption, versioning, and access policy issues
+- **Azure**: Storage accounts, NSGs, and Key Vaults with security misconfigurations
+
+### Security Scanning
+- **Prowler** (AWS): 500+ security checks, CIS Benchmark compliance
+- **ScoutSuite** (Azure): Comprehensive Azure security assessment
+
+### Findings Aggregation
+- Unified JSON/CSV output format
+- Normalized severity levels (Critical, High, Medium, Low)
+- Compliance framework mapping (CIS 2.0, CIS 1.4, CIS 1.5)
+
+### Interactive Dashboard
+- Real-time visualization on port 51000
+- Summary cards with severity breakdown
+- Doughnut chart for severity distribution
+- Bar chart for cloud provider comparison
+- Searchable and filterable findings table
+- Detailed findings view with remediation guidance
+
+### Automated Remediation
+- Python-based remediation engine
+- AWS CLI commands for common fixes
+- Dry-run mode for safe testing
+- Batch remediation support
+
+---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    AWS Account                               │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │         Terraform-Deployed Test Resources           │    │
-│  │  • insecure_bucket (no encryption, no versioning)   │    │
-│  │  • public_read_bucket (public read access)          │    │
-│  │  • website_bucket (HTTP-only hosting)               │    │
-│  │  • cross_account_bucket (overly permissive policy)  │    │
-│  └─────────────────────────────────────────────────────┘    │
-└─────────────────────────┬───────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                  Security Scanning Layer                     │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │                    Prowler                           │    │
-│  │  • 500+ security checks                              │    │
-│  │  • CIS Benchmark compliance                          │    │
-│  │  • JSON output for processing                        │    │
-│  └─────────────────────────────────────────────────────┘    │
-└─────────────────────────┬───────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│              Aggregation Layer (Python)                      │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │         scripts/scanning/aggregate_findings.py       │    │
-│  │  • Parse Prowler JSON output                         │    │
-│  │  • Normalize to common schema                        │    │
-│  │  • Export to JSON and CSV                            │    │
-│  └─────────────────────────────────────────────────────┘    │
-└─────────────────────────┬───────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│               Visualization Layer (Flask)                    │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │              dashboard/app.py                        │    │
-│  │  • Summary cards (Total, Critical, High, Medium)     │    │
-│  │  • Severity doughnut chart (Chart.js)                │    │
-│  │  • Provider bar chart                                │    │
-│  │  • Findings table with details                       │    │
-│  │  • Search and filter functionality                   │    │
-│  └─────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         MULTI-CLOUD ENVIRONMENTS                            │
+│                                                                             │
+│   ┌─────────────────────────────┐     ┌─────────────────────────────┐      │
+│   │         AWS Account         │     │      Azure Subscription      │      │
+│   │  ┌───────────────────────┐  │     │  ┌───────────────────────┐  │      │
+│   │  │ • insecure_bucket     │  │     │  │ • insecure_storage    │  │      │
+│   │  │ • public_read_bucket  │  │     │  │ • no_recovery_storage │  │      │
+│   │  │ • website_bucket      │  │     │  │ • insecure_nsg        │  │      │
+│   │  │ • cross_account_bucket│  │     │  │ • insecure_keyvault   │  │      │
+│   │  └───────────────────────┘  │     │  └───────────────────────┘  │      │
+│   └──────────────┬──────────────┘     └──────────────┬──────────────┘      │
+└──────────────────┼──────────────────────────────────┼───────────────────────┘
+                   │                                   │
+                   ▼                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          SECURITY SCANNING LAYER                            │
+│                                                                             │
+│   ┌─────────────────────────────┐     ┌─────────────────────────────┐      │
+│   │          Prowler            │     │        ScoutSuite           │      │
+│   │  • 500+ AWS checks          │     │  • Multi-cloud support      │      │
+│   │  • CIS Benchmark            │     │  • Azure comprehensive      │      │
+│   │  • JSON output              │     │  • HTML + JS output         │      │
+│   └──────────────┬──────────────┘     └──────────────┬──────────────┘      │
+└──────────────────┼──────────────────────────────────┼───────────────────────┘
+                   │                                   │
+                   └─────────────────┬─────────────────┘
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         AGGREGATION LAYER (Python)                          │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                    aggregate_findings.py                             │  │
+│   │  • Parse Prowler JSON + ScoutSuite JS                               │  │
+│   │  • Normalize to unified schema                                      │  │
+│   │  • Calculate severity statistics                                    │  │
+│   │  • Export to JSON/CSV                                               │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────┬───────────────────────────────────────┘
+                                      │
+                   ┌──────────────────┴──────────────────┐
+                   ▼                                      ▼
+┌─────────────────────────────────┐  ┌─────────────────────────────────────────┐
+│      VISUALIZATION (Flask)      │  │         REMEDIATION ENGINE              │
+│                                 │  │                                         │
+│  • Summary dashboard            │  │  • Automated AWS CLI fixes              │
+│  • Severity charts              │  │  • Dry-run mode                         │
+│  • Findings table               │  │  • Batch remediation                    │
+│  • Search & filter              │  │  • Logging & reporting                  │
+│  • Remediation guidance         │  │                                         │
+└─────────────────────────────────┘  └─────────────────────────────────────────┘
 ```
+
+---
 
 ## Technology Stack
 
-| Component | Technology | Purpose |
-|-----------|-----------|---------|
-| **Cloud Platform** | AWS | Target environment for security scanning |
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| **Cloud Platforms** | AWS, Azure | Target environments for security testing |
 | **Infrastructure as Code** | Terraform | Deploy misconfigured test resources |
-| **Security Scanner** | Prowler 3.x | AWS security assessment (500+ checks) |
-| **Backend** | Python 3.9+ | Findings aggregation and normalization |
+| **AWS Scanner** | Prowler 3.x | AWS security assessment (500+ checks) |
+| **Azure Scanner** | ScoutSuite | Azure security assessment |
+| **Backend** | Python 3.9+ | Aggregation, normalization, remediation |
 | **Web Framework** | Flask | Dashboard server |
 | **Frontend** | Bootstrap 5, Chart.js | UI components and visualizations |
 | **Data Format** | JSON, CSV | Normalized findings storage |
 
+---
+
 ## Prerequisites
 
-Before running this project, ensure you have:
+### Required Accounts
+- **AWS Account** with IAM permissions for S3 and security audits
+- **Azure Account** with subscription and service principal (optional)
 
-- **AWS Account** with IAM permissions for:
-  - S3 bucket creation and management
-  - Security audit read permissions (for Prowler)
-- **Tools Installed**:
-  - [Terraform](https://www.terraform.io/downloads) >= 1.0.0
-  - [Python](https://www.python.org/downloads/) >= 3.9 (Note: Python 3.12 recommended; 3.13 has compatibility issues with Prowler 5.x)
-  - [AWS CLI](https://aws.amazon.com/cli/) configured with credentials
-  - [Prowler](https://github.com/prowler-cloud/prowler) (installed via pip)
+### Required Tools
 
-## Quick Start
+| Tool | Version | Installation |
+|------|---------|--------------|
+| Python | >= 3.9 | [python.org](https://www.python.org/downloads/) |
+| Terraform | >= 1.0.0 | [terraform.io](https://www.terraform.io/downloads) |
+| AWS CLI | >= 2.0 | [AWS CLI Install](https://aws.amazon.com/cli/) |
+| Azure CLI | >= 2.0 | [Azure CLI Install](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) (optional) |
+
+---
+
+## Installation
 
 ### 1. Clone the Repository
+
 ```bash
-git clone https://github.com/yourusername/cloud-security-posture-dashboard.git
+git clone https://github.com/noble-antwi/cloud-security-posture-dashboard.git
 cd cloud-security-posture-dashboard
 ```
 
-### 2. Set Up Python Virtual Environment
-```bash
-# Create virtual environment
-python3 -m venv venv
+### 2. Set Up Python Environment
 
-# Activate it
+```bash
+# Create and activate virtual environment
+python3 -m venv venv
 source venv/bin/activate  # Linux/Mac
-# or
-.\venv\Scripts\activate   # Windows
+# .\venv\Scripts\activate  # Windows
 
 # Install dependencies
-pip install prowler pandas flask
+pip install prowler pandas flask scoutsuite
 ```
 
-### 3. Configure AWS Credentials
+### 3. Configure Cloud Credentials
+
+**AWS:**
 ```bash
 aws configure
-# Enter your AWS Access Key ID, Secret Access Key, and default region
+# Enter: Access Key ID, Secret Access Key, Region
 ```
 
-### 4. Deploy Test Infrastructure
+**Azure (optional):**
+```bash
+az login
+# Set environment variables for Terraform:
+export ARM_CLIENT_ID="your-client-id"
+export ARM_CLIENT_SECRET="your-client-secret"
+export ARM_SUBSCRIPTION_ID="your-subscription-id"
+export ARM_TENANT_ID="your-tenant-id"
+```
+
+---
+
+## Usage
+
+### Deploy Test Infrastructure
+
+**AWS:**
 ```bash
 cd terraform/aws
-terraform init
-terraform plan    # Review what will be created
-terraform apply   # Type 'yes' to confirm
-
-# This creates 4 intentionally misconfigured S3 buckets
+terraform init && terraform apply
 ```
 
-### 5. Run Security Scan
+**Azure:**
 ```bash
-# Scan all services (comprehensive)
-prowler aws
-
-# Or scan specific services (faster)
-prowler aws --service s3
-prowler aws --service s3 iam
+cd terraform/azure
+terraform init && terraform apply
 ```
 
-### 6. Aggregate Findings
+### Run Security Scans
+
+**AWS (Prowler):**
 ```bash
-# Process Prowler output into normalized format
+prowler aws                    # Full scan
+prowler aws --service s3       # S3 only (faster)
+```
+
+**Azure (ScoutSuite):**
+```bash
+scout azure --cli
+```
+
+### Aggregate Findings
+
+```bash
 python scripts/scanning/aggregate_findings.py
 ```
 
-### 7. Launch Dashboard
+### Launch Dashboard
+
 ```bash
 python dashboard/app.py
 ```
 
-Visit **http://localhost:51000** to view the dashboard.
+Open **http://localhost:51000** in your browser.
+
+### Run Remediation (Optional)
+
+```bash
+# Dry run (preview changes)
+python remediation/aws/remediate.py
+
+# Apply fixes
+python remediation/aws/remediate.py --apply
+```
+
+---
 
 ## Project Structure
 
 ```
 cloud-security-posture-dashboard/
 ├── terraform/
-│   └── aws/
-│       └── main.tf              # Misconfigured S3 buckets
+│   ├── aws/
+│   │   └── main.tf                    # AWS misconfigured resources
+│   └── azure/
+│       └── main.tf                    # Azure misconfigured resources
 ├── scripts/
 │   └── scanning/
-│       └── aggregate_findings.py # Prowler output parser
+│       └── aggregate_findings.py      # Multi-tool findings aggregator
+├── remediation/
+│   └── aws/
+│       └── remediate.py               # AWS remediation engine
 ├── dashboard/
-│   ├── app.py                   # Flask application
+│   ├── app.py                         # Flask application
 │   ├── static/
-│   │   └── style.css            # Custom styles
+│   │   └── style.css                  # Custom styles
 │   └── templates/
-│       ├── base.html            # Base template
-│       ├── index.html           # Main dashboard
-│       └── findings.html        # Detailed findings view
-├── output/                      # Prowler scan results
+│       ├── base.html                  # Base template
+│       ├── index.html                 # Main dashboard
+│       └── findings.html              # Detailed findings
+├── output/                            # Prowler scan results
+├── scoutsuite-report/                 # ScoutSuite scan results
 ├── scan-results/
-│   └── aggregated/              # Normalized findings
-├── venv/                        # Python virtual environment
+│   └── aggregated/                    # Normalized findings (JSON/CSV)
 └── README.md
 ```
 
-## Understanding the Dashboard
+---
 
-### Summary Cards
-- **Total Findings**: All security issues detected
-- **Critical**: Urgent issues requiring immediate attention (red)
-- **High**: Serious security concerns (orange)
-- **Medium**: Moderate issues to address (yellow)
+## Security Scanners
 
-### Severity Doughnut Chart
-Visual breakdown of findings by severity level with color coding:
-- Critical = Red
-- High = Orange
-- Medium = Yellow
-- Low = Green
-- Informational = Blue
+### Prowler (AWS)
+
+| Feature | Description |
+|---------|-------------|
+| Checks | 500+ security controls |
+| Compliance | CIS, NIST, PCI-DSS, HIPAA, GDPR |
+| Output | JSON, CSV, HTML |
+| Speed | ~10-30 minutes full scan |
+
+### ScoutSuite (Azure)
+
+| Feature | Description |
+|---------|-------------|
+| Services | 12+ Azure services |
+| Checks | Storage, Network, IAM, Key Vault |
+| Output | HTML report + JavaScript data |
+| Speed | ~1-5 minutes |
+
+---
+
+## Remediation Engine
+
+The remediation engine automates fixing common security issues.
+
+### Supported Remediations
+
+| Finding | Remediation |
+|---------|-------------|
+| `s3_bucket_default_encryption` | Enable AES-256 encryption |
+| `s3_bucket_public_access` | Block all public access |
+| `s3_bucket_versioning_enabled` | Enable versioning |
+| `accessanalyzer_enabled` | Create IAM Access Analyzer |
+
+### Usage
+
+```bash
+# Preview (dry run)
+python remediation/aws/remediate.py
+
+# Apply fixes
+python remediation/aws/remediate.py --apply
+
+# Filter by severity
+python remediation/aws/remediate.py --apply --severity Critical
+
+# Filter by finding type
+python remediation/aws/remediate.py --apply --finding-type s3_bucket_default_encryption
+```
+
+---
+
+## Dashboard
+
+### Summary View
+- **Total Findings**: Aggregate count across all clouds
+- **Severity Cards**: Critical (red), High (orange), Medium (yellow)
+- **Charts**: Doughnut for severity, Bar for cloud providers
 
 ### Findings Table
-Each finding includes:
-- **Severity Badge**: Color-coded priority
-- **Title**: What was checked
-- **Resource**: Affected resource (bucket name or account ID for account-level checks)
-- **Provider**: Cloud provider (AWS)
+- Sortable columns
+- Severity badges
+- Resource identification
+- Provider tags
 
-### Detailed View (All Findings Page)
-Expandable accordion showing:
-- Full issue description
-- Risk explanation
+### Detailed View
+- Expandable accordion for each finding
+- Issue description and risk explanation
 - Remediation steps with CLI commands
-- Compliance framework mappings
+- Compliance framework references
 
-## Test Resources Deployed
-
-The Terraform configuration deploys 4 intentionally misconfigured S3 buckets:
-
-| Bucket | Misconfiguration | Security Risk |
-|--------|-----------------|---------------|
-| `insecure_bucket` | No encryption, no versioning, public access block disabled | Data exposure, no recovery options |
-| `public_read_bucket` | Public read access via bucket policy | Anyone on internet can read files |
-| `website_bucket` | Static website hosting over HTTP | Data transmitted unencrypted |
-| `cross_account_bucket` | Any AWS user can read/write/delete | Complete data compromise possible |
+---
 
 ## Cleanup
 
-**Important**: Always destroy test resources when done to avoid unexpected charges.
+**Important**: Always destroy test resources to avoid charges and security risks.
 
 ```bash
-cd terraform/aws
-terraform destroy  # Type 'yes' to confirm
+# AWS
+cd terraform/aws && terraform destroy
+
+# Azure
+cd terraform/azure && terraform destroy
 ```
+
+---
 
 ## Roadmap
 
-- [x] Initial project setup and architecture design
-- [x] Deploy AWS test infrastructure with misconfigurations
-- [x] Integrate Prowler for AWS scanning
-- [x] Build findings aggregation pipeline
-- [x] Develop Flask dashboard with Chart.js visualizations
-- [x] Add search and filter functionality
-- [x] Implement compliance framework mapping (CIS)
-- [ ] Deploy Azure test infrastructure with misconfigurations
-- [ ] Integrate ScoutSuite for multi-cloud scanning
-- [ ] Create automated remediation scripts (Terraform)
-- [ ] Implement CI/CD pipeline with GitHub Actions
-- [ ] Add alerting/notification system
-- [ ] Container deployment (Docker)
+### Completed
+- [x] AWS test infrastructure with Terraform
+- [x] Azure test infrastructure with Terraform
+- [x] Prowler integration for AWS scanning
+- [x] ScoutSuite integration for Azure scanning
+- [x] Multi-tool findings aggregator
+- [x] Flask dashboard with Chart.js
+- [x] Search and filter functionality
+- [x] AWS remediation engine
+- [x] CIS compliance mapping
+
+### In Progress
+- [ ] CI/CD pipeline with GitHub Actions
+
+### Planned
+- [ ] Multi-account support
 - [ ] Historical trend analysis
+- [ ] Alerting and notifications
+- [ ] Docker containerization
+- [ ] GCP support
+
+---
 
 ## Contributing
 
-Contributions are welcome! Please:
+Contributions are welcome! Please follow these steps:
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -269,23 +426,41 @@ Contributions are welcome! Please:
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
+---
+
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- [Prowler](https://github.com/prowler-cloud/prowler) - AWS security assessment tool
-- [Terraform](https://www.terraform.io/) - Infrastructure as Code
-- [Flask](https://flask.palletsprojects.com/) - Python web framework
-- [Chart.js](https://www.chartjs.org/) - JavaScript charting library
-- [Bootstrap](https://getbootstrap.com/) - CSS framework
-- CIS Benchmarks for cloud security best practices
-
-## Disclaimer
-
-This project deploys **intentionally insecure** cloud resources for educational purposes. These resources should only be deployed in test/sandbox AWS accounts. Always destroy resources after testing to avoid security risks and unexpected charges.
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
 ---
 
-**Built for learning cloud security through hands-on practice.**
+## Disclaimer
+
+> **Warning**: This project deploys **intentionally insecure** cloud resources for educational and testing purposes only.
+>
+> - Only deploy in test/sandbox accounts
+> - Never use in production environments
+> - Always destroy resources after testing
+> - You are responsible for any charges incurred
+
+---
+
+## Acknowledgments
+
+- [Prowler](https://github.com/prowler-cloud/prowler) - AWS Security Tool
+- [ScoutSuite](https://github.com/nccgroup/ScoutSuite) - Multi-Cloud Security Auditing
+- [Terraform](https://www.terraform.io/) - Infrastructure as Code
+- [Flask](https://flask.palletsprojects.com/) - Python Web Framework
+- [Chart.js](https://www.chartjs.org/) - JavaScript Charting
+- [Bootstrap](https://getbootstrap.com/) - CSS Framework
+- [CIS Benchmarks](https://www.cisecurity.org/) - Security Best Practices
+
+---
+
+<div align="center">
+
+**Built for learning cloud security through hands-on practice**
+
+[Report Bug](https://github.com/noble-antwi/cloud-security-posture-dashboard/issues) · [Request Feature](https://github.com/noble-antwi/cloud-security-posture-dashboard/issues)
+
+</div>
