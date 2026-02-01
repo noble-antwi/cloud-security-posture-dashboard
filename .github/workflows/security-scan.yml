@@ -317,12 +317,15 @@ jobs:
           mkdir -p ${{ env.SCOUTSUITE_OUTPUT_DIR }}
 
       # Run ScoutSuite Azure security scan
+      # Note: ScoutSuite has a bug with HTML report generation in non-interactive mode
+      # The scan data (.js files) is saved successfully before the HTML error occurs
       - name: Run ScoutSuite Azure scan
+        continue-on-error: true
         run: |
           echo "=========================================="
           echo "Starting ScoutSuite Azure Security Scan"
           echo "=========================================="
-          scout azure --cli --no-browser --report-dir ${{ env.SCOUTSUITE_OUTPUT_DIR }} </dev/null || true
+          scout azure --cli --no-browser --report-dir ${{ env.SCOUTSUITE_OUTPUT_DIR }}
           echo "ScoutSuite scan complete!"
 
       # Count Azure security findings
