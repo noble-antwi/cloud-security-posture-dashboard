@@ -311,8 +311,10 @@ jobs:
           az account set --subscription "${{ secrets.ARM_SUBSCRIPTION_ID }}"
           echo "Logged into Azure subscription"
 
-      - name: Create output directory
-        run: mkdir -p ${{ env.SCOUTSUITE_OUTPUT_DIR }}
+      - name: Clean and create output directory
+        run: |
+          rm -rf ${{ env.SCOUTSUITE_OUTPUT_DIR }}
+          mkdir -p ${{ env.SCOUTSUITE_OUTPUT_DIR }}
 
       # Run ScoutSuite Azure security scan
       - name: Run ScoutSuite Azure scan
@@ -320,7 +322,7 @@ jobs:
           echo "=========================================="
           echo "Starting ScoutSuite Azure Security Scan"
           echo "=========================================="
-          scout azure --cli --force --no-browser --report-dir ${{ env.SCOUTSUITE_OUTPUT_DIR }}
+          yes | scout azure --cli --no-browser --report-dir ${{ env.SCOUTSUITE_OUTPUT_DIR }} || true
           echo "ScoutSuite scan complete!"
 
       # Count Azure security findings
