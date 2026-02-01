@@ -102,8 +102,8 @@ resource "azurerm_storage_account" "insecure_storage" {
 
 # Create a container with public access
 resource "azurerm_storage_container" "public_container" {
-  name                  = "public-data"
-  storage_account_name  = azurerm_storage_account.insecure_storage.name
+  name                 = "public-data"
+  storage_account_name = azurerm_storage_account.insecure_storage.name
 
   # SECURITY ISSUE: Container is publicly accessible
   container_access_type = "blob"
@@ -155,7 +155,7 @@ resource "azurerm_network_security_group" "insecure_nsg" {
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "22"
-    source_address_prefix      = "*"  # DANGEROUS: Any IP can access
+    source_address_prefix      = "*" # DANGEROUS: Any IP can access
     destination_address_prefix = "*"
   }
 
@@ -168,7 +168,7 @@ resource "azurerm_network_security_group" "insecure_nsg" {
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "3389"
-    source_address_prefix      = "*"  # DANGEROUS: Any IP can access
+    source_address_prefix      = "*" # DANGEROUS: Any IP can access
     destination_address_prefix = "*"
   }
 
@@ -181,7 +181,7 @@ resource "azurerm_network_security_group" "insecure_nsg" {
     protocol                   = "*"
     source_port_range          = "*"
     destination_port_range     = "*"
-    source_address_prefix      = "*"  # DANGEROUS: Everything allowed
+    source_address_prefix      = "*" # DANGEROUS: Everything allowed
     destination_address_prefix = "*"
   }
 

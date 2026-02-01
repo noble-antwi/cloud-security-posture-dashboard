@@ -3,7 +3,7 @@
 
 terraform {
   required_version = ">= 1.5.0"
-  
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -18,7 +18,7 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
-  
+
   default_tags {
     tags = {
       Project     = "CloudSecurityPostureDashboard"
@@ -67,9 +67,9 @@ resource "aws_s3_bucket" "insecure_bucket" {
 
   # Tags help identify what this resource is for
   tags = {
-    Name            = "Intentionally Insecure Bucket"
-    SecurityStatus  = "Misconfigured"
-    TestingPurpose  = "ProwlerDetection"
+    Name           = "Intentionally Insecure Bucket"
+    SecurityStatus = "Misconfigured"
+    TestingPurpose = "ProwlerDetection"
   }
 }
 
@@ -80,10 +80,10 @@ resource "aws_s3_bucket_public_access_block" "insecure_bucket_public_access" {
 
   # Setting these to FALSE is DANGEROUS in production!
   # This allows the bucket to potentially be made public
-  block_public_acls       = false  # Should be: true
-  block_public_policy     = false  # Should be: true
-  ignore_public_acls      = false  # Should be: true
-  restrict_public_buckets = false  # Should be: true
+  block_public_acls       = false # Should be: true
+  block_public_policy     = false # Should be: true
+  ignore_public_acls      = false # Should be: true
+  restrict_public_buckets = false # Should be: true
 }
 
 # Output the bucket name so we can reference it later
@@ -118,9 +118,9 @@ resource "aws_s3_bucket" "public_read_bucket" {
   bucket = "public-read-test-${random_id.bucket_suffix.hex}"
 
   tags = {
-    Name            = "Public Read Bucket"
-    SecurityStatus  = "Misconfigured"
-    TestingPurpose  = "PublicAccessDetection"
+    Name           = "Public Read Bucket"
+    SecurityStatus = "Misconfigured"
+    TestingPurpose = "PublicAccessDetection"
   }
 }
 
@@ -147,8 +147,8 @@ resource "aws_s3_bucket_policy" "public_read_policy" {
       {
         Sid       = "PublicReadGetObject"
         Effect    = "Allow"
-        Principal = "*"              # DANGEROUS: "*" means ANYONE
-        Action    = "s3:GetObject"   # Can read any object
+        Principal = "*"            # DANGEROUS: "*" means ANYONE
+        Action    = "s3:GetObject" # Can read any object
         Resource  = "${aws_s3_bucket.public_read_bucket.arn}/*"
       }
     ]
@@ -178,9 +178,9 @@ resource "aws_s3_bucket" "website_bucket" {
   bucket = "website-test-${random_id.bucket_suffix.hex}"
 
   tags = {
-    Name            = "Website Hosting Bucket"
-    SecurityStatus  = "Misconfigured"
-    TestingPurpose  = "WebsiteSecurityDetection"
+    Name           = "Website Hosting Bucket"
+    SecurityStatus = "Misconfigured"
+    TestingPurpose = "WebsiteSecurityDetection"
   }
 }
 
@@ -232,9 +232,9 @@ resource "aws_s3_bucket" "cross_account_bucket" {
   bucket = "cross-account-test-${random_id.bucket_suffix.hex}"
 
   tags = {
-    Name            = "Cross Account Access Bucket"
-    SecurityStatus  = "Misconfigured"
-    TestingPurpose  = "CrossAccountDetection"
+    Name           = "Cross Account Access Bucket"
+    SecurityStatus = "Misconfigured"
+    TestingPurpose = "CrossAccountDetection"
   }
 }
 
@@ -257,14 +257,14 @@ resource "aws_s3_bucket_policy" "cross_account_policy" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid       = "AllowAnyAWSUser"
-        Effect    = "Allow"
+        Sid    = "AllowAnyAWSUser"
+        Effect = "Allow"
         # This allows ANY authenticated AWS user (any account!)
         Principal = { AWS = "*" }
         Action = [
           "s3:GetObject",
-          "s3:PutObject",      # Can upload files!
-          "s3:DeleteObject"    # Can delete files!
+          "s3:PutObject",   # Can upload files!
+          "s3:DeleteObject" # Can delete files!
         ]
         Resource = "${aws_s3_bucket.cross_account_bucket.arn}/*"
       }
