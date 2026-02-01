@@ -322,7 +322,7 @@ jobs:
           echo "=========================================="
           echo "Starting ScoutSuite Azure Security Scan"
           echo "=========================================="
-          yes | scout azure --cli --no-browser --report-dir ${{ env.SCOUTSUITE_OUTPUT_DIR }} || true
+          scout azure --cli --no-browser --report-dir ${{ env.SCOUTSUITE_OUTPUT_DIR }} </dev/null || true
           echo "ScoutSuite scan complete!"
 
       # Count Azure security findings
