@@ -22,15 +22,15 @@ Each finding can be expanded to show full details including:
 <!-- Search/Filter Box -->
 <div class="card mb-4">
     <div class="card-body">
-        <div class="row">
-            <div class="col-md-6">
+        <div class="row g-2">
+            <div class="col-md-4">
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-search"></i></span>
                     <input type="text" class="form-control" id="searchInput"
                            placeholder="Search findings..." onkeyup="filterFindings()">
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <select class="form-select" id="severityFilter" onchange="filterFindings()">
                     <option value="">All Severities</option>
                     <option value="Critical">Critical</option>
@@ -39,13 +39,26 @@ Each finding can be expanded to show full details including:
                     <option value="Low">Low</option>
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <select class="form-select" id="providerFilter" onchange="filterFindings()">
                     <option value="">All Providers</option>
                     <option value="AWS">AWS</option>
                     <option value="Azure">Azure</option>
                     <option value="GCP">GCP</option>
                 </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="accountFilter" onchange="filterFindings()">
+                    <option value="">All Accounts</option>
+                    {% for account in accounts %}
+                    <option value="{{ account }}">{{ account }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button class="btn btn-outline-secondary w-100" onclick="clearFilters()" title="Clear all filters">
+                    <i class="bi bi-x-circle"></i>
+                </button>
             </div>
         </div>
     </div>
@@ -58,7 +71,8 @@ Each finding can be expanded to show full details including:
     <div class="accordion-item finding-item"
          data-severity="{{ finding.severity }}"
          data-provider="{{ finding.cloud_provider }}"
-         data-searchable="{{ finding.title }} {{ finding.resource }} {{ finding.issue }}">
+         data-account="{{ finding.account_id }}"
+         data-searchable="{{ finding.title }} {{ finding.resource }} {{ finding.issue }} {{ finding.account_id }}">
         <h2 class="accordion-header">
             <button class="accordion-button collapsed" type="button"
                     data-bs-toggle="collapse"
@@ -92,7 +106,94 @@ Each finding can be expanded to show full details including:
                         <p>{{ finding.risk }}</p>
                         {% endif %}
 
-                        {% if finding.remediation %}
+                        {% if finding.remediation and finding.remediation.options %}
+                        <h6 class="text-muted mt-3">
+                            <i class="bi bi-tools"></i> Remediation Options
+                            {% if finding.remediation.doc_url %}
+                            <a href="{{ finding.remediation.doc_url }}" target="_blank"
+                               class="btn btn-sm btn-outline-primary ms-2">
+                                <i class="bi bi-book"></i> Documentation
+                            </a>
+                            {% endif %}
+                        </h6>
+
+                        {% if finding.remediation.summary %}
+                        <p class="text-muted small mb-3">{{ finding.remediation.summary }}</p>
+                        {% endif %}
+
+                        <!-- Store outer loop index for nested loops -->
+                        {% set finding_idx = loop.index %}
+
+                        <!-- Remediation Tabs -->
+                        <ul class="nav nav-tabs" id="remediationTabs-{{ finding_idx }}" role="tablist">
+                            {% for option in finding.remediation.options %}
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link {% if loop.first %}active{% endif %}"
+                                        id="tab-{{ finding_idx }}-{{ loop.index }}"
+                                        data-bs-toggle="tab"
+                                        data-bs-target="#content-{{ finding_idx }}-{{ loop.index }}"
+                                        type="button" role="tab">
+                                    {% if option.type == 'cli' %}
+                                    <i class="bi bi-terminal"></i>
+                                    {% elif option.type == 'terraform' %}
+                                    <i class="bi bi-braces"></i>
+                                    {% elif option.type == 'cloudformation' %}
+                                    <i class="bi bi-stack"></i>
+                                    {% elif option.type == 'console' %}
+                                    <i class="bi bi-window"></i>
+                                    {% else %}
+                                    <i class="bi bi-code-slash"></i>
+                                    {% endif %}
+                                    {{ option.label }}
+                                </button>
+                            </li>
+                            {% endfor %}
+                        </ul>
+
+                        <div class="tab-content border border-top-0 rounded-bottom p-3" id="remediationContent-{{ finding_idx }}">
+                            {% for option in finding.remediation.options %}
+                            <div class="tab-pane fade {% if loop.first %}show active{% endif %}"
+                                 id="content-{{ finding_idx }}-{{ loop.index }}"
+                                 role="tabpanel">
+
+                                {% if option.code %}
+                                <!-- Code block with copy button -->
+                                <div class="position-relative">
+                                    <button class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 m-2 copy-btn"
+                                            onclick="copyToClipboard(this, `{{ option.code | e }}`)"
+                                            title="Copy to clipboard">
+                                        <i class="bi bi-clipboard"></i> Copy
+                                    </button>
+                                    <pre class="bg-dark text-light p-3 rounded" style="white-space: pre-wrap; padding-right: 80px !important;"><code>{{ option.code }}</code></pre>
+                                </div>
+                                {% endif %}
+
+                                {% if option.html %}
+                                <!-- HTML content (for Azure Portal steps) -->
+                                <div class="remediation-html">
+                                    {{ option.html | safe }}
+                                </div>
+                                {% endif %}
+
+                                {% if option.steps %}
+                                <!-- Step-by-step list -->
+                                <ol class="mb-0">
+                                    {% for step in option.steps %}
+                                    <li class="mb-2">{{ step }}</li>
+                                    {% endfor %}
+                                </ol>
+                                {% endif %}
+
+                                {% if option.note %}
+                                <div class="alert alert-info mt-3 mb-0 py-2">
+                                    <i class="bi bi-lightbulb"></i> <strong>Note:</strong> {{ option.note }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% elif finding.remediation and finding.remediation is string %}
+                        <!-- Fallback for old format (plain text) -->
                         <h6 class="text-muted mt-3">Remediation</h6>
                         <div class="bg-light p-3 rounded">
                             <pre class="mb-0" style="white-space: pre-wrap;">{{ finding.remediation }}</pre>
@@ -156,6 +257,34 @@ Each finding can be expanded to show full details including:
 {% block extra_scripts %}
 <script>
 // =============================================================================
+// COPY TO CLIPBOARD FUNCTIONALITY
+// =============================================================================
+
+function copyToClipboard(button, text) {
+    // Decode HTML entities
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    const decodedText = textarea.value;
+
+    navigator.clipboard.writeText(decodedText).then(() => {
+        // Show success feedback
+        const originalHTML = button.innerHTML;
+        button.innerHTML = '<i class="bi bi-check"></i> Copied!';
+        button.classList.remove('btn-outline-secondary');
+        button.classList.add('btn-success');
+
+        setTimeout(() => {
+            button.innerHTML = originalHTML;
+            button.classList.remove('btn-success');
+            button.classList.add('btn-outline-secondary');
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        button.innerHTML = '<i class="bi bi-x"></i> Failed';
+    });
+}
+
+// =============================================================================
 // SEARCH AND FILTER FUNCTIONALITY
 // =============================================================================
 
@@ -164,32 +293,55 @@ function filterFindings() {
     const searchText = document.getElementById('searchInput').value.toLowerCase();
     const severityFilter = document.getElementById('severityFilter').value;
     const providerFilter = document.getElementById('providerFilter').value;
+    const accountFilter = document.getElementById('accountFilter').value;
 
     // Get all finding items
     const items = document.querySelectorAll('.finding-item');
+    let visibleCount = 0;
 
     items.forEach(item => {
         // Get item data attributes
         const severity = item.getAttribute('data-severity');
         const provider = item.getAttribute('data-provider');
+        const account = item.getAttribute('data-account');
         const searchable = item.getAttribute('data-searchable').toLowerCase();
 
         // Check if item matches all filters
         const matchesSearch = searchable.includes(searchText);
         const matchesSeverity = !severityFilter || severity === severityFilter;
         const matchesProvider = !providerFilter || provider === providerFilter;
+        const matchesAccount = !accountFilter || account === accountFilter;
 
         // Show/hide based on filters
-        if (matchesSearch && matchesSeverity && matchesProvider) {
+        if (matchesSearch && matchesSeverity && matchesProvider && matchesAccount) {
             item.style.display = '';
+            visibleCount++;
         } else {
             item.style.display = 'none';
         }
     });
 
-    // Update count
-    const visibleCount = document.querySelectorAll('.finding-item:not([style*="display: none"])').length;
-    // Could update a counter here if needed
+    // Update visible count in badge
+    updateVisibleCount(visibleCount, items.length);
+}
+
+function clearFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('severityFilter').value = '';
+    document.getElementById('providerFilter').value = '';
+    document.getElementById('accountFilter').value = '';
+    filterFindings();
+}
+
+function updateVisibleCount(visible, total) {
+    const badge = document.querySelector('.badge.bg-primary');
+    if (badge) {
+        if (visible === total) {
+            badge.textContent = `${total} findings`;
+        } else {
+            badge.textContent = `${visible} of ${total} findings`;
+        }
+    }
 }
 </script>
 {% endblock %}

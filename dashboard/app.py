@@ -154,12 +154,18 @@ def findings_list():
     Detailed findings page.
 
     Shows all findings in a searchable, sortable table.
+    Supports filtering by account for multi-account environments.
     """
     findings = load_latest_findings()
+    summary = load_latest_summary()
+
+    # Extract accounts list for the filter dropdown
+    accounts = summary.get('accounts', [])
 
     return render_template(
         'findings.html',
         findings=findings,
+        accounts=accounts,
         get_severity_color=get_severity_color
     )
 

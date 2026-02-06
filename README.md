@@ -12,24 +12,51 @@ A comprehensive **multi-cloud security assessment platform** that automates the 
 
 ---
 
+## Quick Start
+
+```bash
+# 1. Clone and setup
+git clone https://github.com/noble-antwi/cloud-security-posture-dashboard.git
+cd cloud-security-posture-dashboard
+python3 -m venv venv && source venv/bin/activate
+pip install prowler pandas flask scoutsuite
+
+# 2. Scan your AWS accounts
+./scripts/scanning/run_multi_account_scan.sh --profiles "your-profile" --quick
+
+# 3. Aggregate and visualize
+python scripts/scanning/aggregate_findings.py
+python dashboard/app.py
+
+# 4. Open http://localhost:51000
+```
+
+> **Detailed Guide**: See [docs/USAGE.md](docs/USAGE.md) for comprehensive documentation.
+
+---
+
 ## Table of Contents
 
+- [Quick Start](#quick-start)
 - [Overview](#overview)
+- [How It Works](#how-it-works)
 - [Features](#features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Usage](#usage)
+- [Multi-Account Scanning](#multi-account-scanning)
 - [Project Structure](#project-structure)
 - [Security Scanners](#security-scanners)
-- [Remediation Engine](#remediation-engine)
+- [Remediation Guidance](#remediation-guidance)
 - [Dashboard](#dashboard)
 - [Cleanup](#cleanup)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
 - [License](#license)
 - [Disclaimer](#disclaimer)
+- [Documentation](#documentation)
 
 ---
 
@@ -43,7 +70,7 @@ Cloud Security Posture Dashboard is an end-to-end security auditing solution des
 | **Scan** | Automated security assessment using Prowler (AWS) and ScoutSuite (Azure) |
 | **Aggregate** | Normalize findings from multiple tools into a unified schema |
 | **Visualize** | Interactive web dashboard with charts, filters, and detailed findings |
-| **Remediate** | Automated remediation scripts with CLI commands |
+| **Remediate** | Remediation guidance with multiple options (CLI, Terraform, Console) |
 
 ### Use Cases
 
@@ -51,6 +78,38 @@ Cloud Security Posture Dashboard is an end-to-end security auditing solution des
 - **Cloud Engineers**: Learn common misconfigurations and how to detect them
 - **Students/Learners**: Hands-on practice with cloud security in a safe environment
 - **DevSecOps Teams**: Template for building security automation pipelines
+
+---
+
+## How It Works
+
+The project follows a **pipeline architecture** where each step produces output for the next:
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   DEPLOY    │ ──▶ │    SCAN     │ ──▶ │  AGGREGATE  │ ──▶ │  DASHBOARD  │
+│  (Optional) │     │             │     │             │     │             │
+│  Terraform  │     │   Prowler   │     │   Python    │     │    Flask    │
+│             │     │  ScoutSuite │     │   Script    │     │  Chart.js   │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+      │                   │                   │                   │
+      ▼                   ▼                   ▼                   ▼
+   Creates            Connects to        Reads raw JSON      Reads unified
+   insecure           AWS/Azure,         normalizes to       JSON, renders
+   test resources     runs 500+ checks   common format       charts & tables
+```
+
+| Step | Script/Tool | Input | Output |
+|------|-------------|-------|--------|
+| **Deploy** | `terraform apply` | Terraform files | Cloud resources |
+| **Scan** | `run_multi_account_scan.sh` | AWS credentials | `output/*.json` |
+| **Aggregate** | `aggregate_findings.py` | Raw JSON files | `scan-results/aggregated/*.json` |
+| **Visualize** | `dashboard/app.py` | Aggregated JSON | Web UI on port 51000 |
+
+**Why this separation?**
+- Scans are **expensive** (API calls, 10-30 min) — run them once
+- Aggregation is **cheap** (local files, seconds) — re-run anytime
+- You can update dashboard logic without re-scanning
 
 ---
 
@@ -77,11 +136,11 @@ Cloud Security Posture Dashboard is an end-to-end security auditing solution des
 - Searchable and filterable findings table
 - Detailed findings view with remediation guidance
 
-### Automated Remediation
-- Python-based remediation engine
-- AWS CLI commands for common fixes
-- Dry-run mode for safe testing
-- Batch remediation support
+### Remediation Guidance
+- Multiple remediation options per finding (CLI, Terraform, Console)
+- Copy-to-clipboard for quick command execution
+- Links to official documentation
+- Company-policy friendly (choose your own approach)
 
 ---
 
@@ -130,15 +189,16 @@ Cloud Security Posture Dashboard is an end-to-end security auditing solution des
                                       │
                    ┌──────────────────┴──────────────────┐
                    ▼                                      ▼
-┌─────────────────────────────────┐  ┌─────────────────────────────────────────┐
-│      VISUALIZATION (Flask)      │  │         REMEDIATION ENGINE              │
-│                                 │  │                                         │
-│  • Summary dashboard            │  │  • Automated AWS CLI fixes              │
-│  • Severity charts              │  │  • Dry-run mode                         │
-│  • Findings table               │  │  • Batch remediation                    │
-│  • Search & filter              │  │  • Logging & reporting                  │
-│  • Remediation guidance         │  │                                         │
-└─────────────────────────────────┘  └─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       VISUALIZATION & GUIDANCE (Flask)                       │
+│                                                                              │
+│  • Summary dashboard with severity charts                                   │
+│  • Searchable & filterable findings table                                   │
+│  • Detailed findings view with risk explanation                             │
+│  • Remediation options: AWS CLI, Terraform, Console steps                   │
+│  • Copy-to-clipboard for quick command execution                            │
+│  • Links to official documentation                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -151,7 +211,7 @@ Cloud Security Posture Dashboard is an end-to-end security auditing solution des
 | **Infrastructure as Code** | Terraform | Deploy misconfigured test resources |
 | **AWS Scanner** | Prowler 3.x | AWS security assessment (500+ checks) |
 | **Azure Scanner** | ScoutSuite | Azure security assessment |
-| **Backend** | Python 3.9+ | Aggregation, normalization, remediation |
+| **Backend** | Python 3.9+ | Aggregation, normalization, data processing |
 | **Web Framework** | Flask | Dashboard server |
 | **Frontend** | Bootstrap 5, Chart.js | UI components and visualizations |
 | **Data Format** | JSON, CSV | Normalized findings storage |
@@ -259,15 +319,81 @@ python dashboard/app.py
 
 Open **http://localhost:51000** in your browser.
 
-### Run Remediation (Optional)
+---
+
+## Multi-Account Scanning
+
+The dashboard supports scanning and aggregating findings from multiple AWS accounts. There are three approaches you can use:
+
+### Approach 1: AWS Profiles (Recommended for Small Teams)
+
+Best for: Teams managing a few accounts manually with separate credentials.
+
+**Setup:**
+```bash
+# Configure profiles in ~/.aws/credentials
+[production]
+aws_access_key_id = AKIA...
+aws_secret_access_key = ...
+
+[staging]
+aws_access_key_id = AKIA...
+aws_secret_access_key = ...
+```
+
+**Scan:**
+```bash
+./scripts/scanning/run_multi_account_scan.sh --profiles "production,staging"
+```
+
+### Approach 2: Assume Role (Recommended for Enterprises)
+
+Best for: Organizations using a central security account that assumes roles into target accounts.
+
+**Setup:**
+1. Create an IAM role (e.g., `SecurityAuditRole`) in each target account
+2. Attach the `SecurityAudit` AWS managed policy
+3. Configure trust policy to allow your security account to assume the role
+
+**Scan:**
+```bash
+./scripts/scanning/run_multi_account_scan.sh \
+  --accounts "111111111111,222222222222,333333333333" \
+  --role-arn "arn:aws:iam::ACCOUNT_ID:role/SecurityAuditRole"
+```
+
+### Approach 3: AWS Organizations
+
+Best for: Large organizations with AWS Organizations set up.
+
+**Scan:**
+```bash
+./scripts/scanning/run_multi_account_scan.sh --org \
+  --role-arn "arn:aws:iam::ACCOUNT_ID:role/SecurityAuditRole"
+```
+
+### Multi-Account Workflow
 
 ```bash
-# Dry run (preview changes)
-python remediation/aws/remediate.py
+# 1. Run scans across accounts
+./scripts/scanning/run_multi_account_scan.sh --profiles "prod,dev"
 
-# Apply fixes
-python remediation/aws/remediate.py --apply
+# 2. Aggregate findings (auto-detects account subdirectories)
+python scripts/scanning/aggregate_findings.py
+
+# 3. Launch dashboard (includes Account filter)
+python dashboard/app.py
 ```
+
+The dashboard will show an **Account filter** dropdown to view findings by account.
+
+### Which Approach Should You Use?
+
+| Approach | Best For | Pros | Cons |
+|----------|----------|------|------|
+| **AWS Profiles** | Small teams (2-5 accounts) | Simple setup, no IAM changes | Credentials in multiple places |
+| **Assume Role** | Enterprises | Centralized, auditable | Requires IAM setup |
+| **Organizations** | Large orgs | Auto-discovers accounts | Requires Org access |
 
 ---
 
@@ -275,6 +401,8 @@ python remediation/aws/remediate.py --apply
 
 ```
 cloud-security-posture-dashboard/
+├── docs/
+│   └── USAGE.md                       # Detailed usage documentation
 ├── terraform/
 │   ├── aws/
 │   │   └── main.tf                    # AWS misconfigured resources
@@ -282,10 +410,9 @@ cloud-security-posture-dashboard/
 │       └── main.tf                    # Azure misconfigured resources
 ├── scripts/
 │   └── scanning/
-│       └── aggregate_findings.py      # Multi-tool findings aggregator
-├── remediation/
-│   └── aws/
-│       └── remediate.py               # AWS remediation engine
+│       ├── aggregate_findings.py      # Multi-tool findings aggregator
+│       └── run_multi_account_scan.sh  # Multi-account scanning script
+├── remediation/                       # (Reserved for future use)
 ├── dashboard/
 │   ├── app.py                         # Flask application
 │   ├── static/
@@ -325,34 +452,36 @@ cloud-security-posture-dashboard/
 
 ---
 
-## Remediation Engine
+## Remediation Guidance
 
-The remediation engine automates fixing common security issues.
+Instead of automated fixes, the dashboard provides **multiple remediation options** for each finding, allowing your security team to choose the approach that fits your company's policies.
 
-### Supported Remediations
+### Why Multiple Options?
 
-| Finding | Remediation |
-|---------|-------------|
-| `s3_bucket_default_encryption` | Enable AES-256 encryption |
-| `s3_bucket_public_access` | Block all public access |
-| `s3_bucket_versioning_enabled` | Enable versioning |
-| `accessanalyzer_enabled` | Create IAM Access Analyzer |
+| Scenario | One-Size-Fits-All | Your Company's Policy |
+|----------|-------------------|----------------------|
+| S3 Encryption | AES-256 (default) | KMS with customer-managed keys |
+| Public Access | Block everything | Allow specific IPs for partners |
+| Versioning | Enable only | Enable + lifecycle policy |
 
-### Usage
+### Available Remediation Formats
 
-```bash
-# Preview (dry run)
-python remediation/aws/remediate.py
+Each finding in the dashboard shows:
 
-# Apply fixes
-python remediation/aws/remediate.py --apply
+| Format | Description |
+|--------|-------------|
+| **AWS CLI** | Ready-to-run commands with copy button |
+| **Terraform** | Infrastructure as Code snippets |
+| **Console Steps** | Step-by-step portal instructions |
+| **Documentation** | Links to official AWS/Azure docs |
 
-# Filter by severity
-python remediation/aws/remediate.py --apply --severity Critical
+### Using Remediation Guidance
 
-# Filter by finding type
-python remediation/aws/remediate.py --apply --finding-type s3_bucket_default_encryption
-```
+1. Open the dashboard: `python dashboard/app.py`
+2. Navigate to **All Findings**
+3. Expand a finding to see remediation options
+4. Choose the approach that fits your policy
+5. Copy the command or follow the steps
 
 ---
 
@@ -372,7 +501,9 @@ python remediation/aws/remediate.py --apply --finding-type s3_bucket_default_enc
 ### Detailed View
 - Expandable accordion for each finding
 - Issue description and risk explanation
-- Remediation steps with CLI commands
+- **Tabbed remediation options** (CLI, Terraform, Console)
+- Copy-to-clipboard for commands
+- Documentation links
 - Compliance framework references
 
 ---
@@ -401,14 +532,14 @@ cd terraform/azure && terraform destroy
 - [x] Multi-tool findings aggregator
 - [x] Flask dashboard with Chart.js
 - [x] Search and filter functionality
-- [x] AWS remediation engine
+- [x] Remediation guidance with multiple options
 - [x] CIS compliance mapping
+- [x] Multi-account AWS support
 
 ### In Progress
 - [ ] CI/CD pipeline with GitHub Actions
 
 ### Planned
-- [ ] Multi-account support
 - [ ] Historical trend analysis
 - [ ] Alerting and notifications
 - [ ] Docker containerization
@@ -442,6 +573,17 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for detai
 > - Never use in production environments
 > - Always destroy resources after testing
 > - You are responsible for any charges incurred
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [README.md](README.md) | Project overview and quick start |
+| [docs/USAGE.md](docs/USAGE.md) | Detailed usage guide with examples |
+
+As the project evolves, documentation is updated to reflect new features and changes.
 
 ---
 
